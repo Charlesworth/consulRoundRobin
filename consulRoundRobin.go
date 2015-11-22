@@ -92,7 +92,7 @@ func GetServiceEndpoint(service string) (endpoint string, err error) {
 	//if timeout
 	if services[service].timedOut() {
 		//refresh endpoints
-		err := services[service].refresh()
+		err = services[service].refresh()
 		if err != nil {
 			return "", err
 		}
