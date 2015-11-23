@@ -8,8 +8,8 @@ import (
 
 func TestServiceMapNewService(t *testing.T) {
 	//test getHealthyEndpoints error
-	agent.endpoints = []string{}
-	agent.err = errors.New("get healthly endpoints failure")
+	testAgent.endpoints = []string{}
+	testAgent.err = errors.New("get healthly endpoints failure")
 	testServiceMap := make(serviceMap)
 	err := testServiceMap.newService("testNewErrorCase")
 	if err == nil {
@@ -21,8 +21,8 @@ func TestServiceMapNewService(t *testing.T) {
 	}
 
 	//test valid test case
-	agent.endpoints = []string{"test.com/test1", "test.com/test2", "test.com/test3"}
-	agent.err = nil
+	testAgent.endpoints = []string{"test.com/test1", "test.com/test2", "test.com/test3"}
+	testAgent.err = nil
 	err = testServiceMap.newService("testNewValidCase")
 	if err != nil {
 		t.Error("adding a valid test case returned error:", err)
@@ -65,8 +65,8 @@ func TestServiceEndpointsRefresh(t *testing.T) {
 		endpoints: []string{"test.com/test1", "test.com/test2"},
 		index:     0,
 	}
-	agent.endpoints = []string{}
-	agent.err = errors.New("get healthly endpoints failure")
+	testAgent.endpoints = []string{}
+	testAgent.err = errors.New("get healthly endpoints failure")
 	err := testServiceEndpoint.refresh()
 	if err == nil {
 		t.Error("no error returned despite getHealthyEndpoints returning an error")
@@ -77,8 +77,8 @@ func TestServiceEndpointsRefresh(t *testing.T) {
 		endpoints: []string{"test.com/test1", "test.com/test2"},
 		index:     1,
 	}
-	agent.endpoints = []string{"test.com/test1", "test.com/test2"}
-	agent.err = nil
+	testAgent.endpoints = []string{"test.com/test1", "test.com/test2"}
+	testAgent.err = nil
 	err = testServiceEndpoint.refresh()
 	if err != nil {
 		t.Error("refreshing a valid test case returned error:", err)
@@ -92,8 +92,8 @@ func TestServiceEndpointsRefresh(t *testing.T) {
 		endpoints: []string{"test.com/test1", "test.com/test2"},
 		index:     5,
 	}
-	agent.endpoints = []string{"test.com/test1", "test.com/test2"}
-	agent.err = nil
+	testAgent.endpoints = []string{"test.com/test1", "test.com/test2"}
+	testAgent.err = nil
 	err = testServiceEndpoint.refresh()
 	if err != nil {
 		t.Error("refreshing a valid test case returned error:", err)
@@ -169,10 +169,10 @@ var testCases = []BehaviorTest{
 func TestGetServiceEndpoint(t *testing.T) {
 	for i := range testCases {
 		if testCases[i].sleep {
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Millisecond * 10)
 		}
-		agent.endpoints = testCases[i].agentEndpoints
-		agent.err = testCases[i].agentError
+		testAgent.endpoints = testCases[i].agentEndpoints
+		testAgent.err = testCases[i].agentError
 
 		endpoint, err := GetServiceEndpoint(testCases[i].serviceName)
 
