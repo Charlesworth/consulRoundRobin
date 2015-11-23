@@ -6,6 +6,81 @@ import (
 	"time"
 )
 
+type BehaviorTest struct {
+	testName             string
+	consulAgentEndpoints []string
+	consulAgentError     error
+	serviceName          string
+	expectedEndpointOut  string
+	sleep                bool
+}
+
+var testCases = []BehaviorTest{
+	{testName: "new service (working consul request)",
+		consulAgentEndpoints: []string{"test.com/test1", "test.com/test2"},
+		consulAgentError:     nil,
+		serviceName:          "testService1",
+		expectedEndpointOut:  "test.com/test1"},
+	{testName: "new service (error consul request)",
+		consulAgentEndpoints: []string{""},
+		consulAgentError:     errors.New("consul error"),
+		serviceName:          "testService2",
+		expectedEndpointOut:  ""},
+	{testName: "refresh existing service (error consul request)",
+		consulAgentEndpoints: []string{""},
+		consulAgentError:     errors.New("consul error"),
+		serviceName:          "testService1",
+		expectedEndpointOut:  "",
+		sleep:                true},
+	{testName: "refresh existing service (working consul request)",
+		consulAgentEndpoints: []string{"test.com/test1", "test.com/test2"},
+		consulAgentError:     nil,
+		serviceName:          "testService1",
+		expectedEndpointOut:  "test.com/test2",
+		sleep:                true},
+	{testName: "new service (working consul request)",
+		consulAgentEndpoints: []string{"test.com/test1", "test.com/test2"},
+		consulAgentError:     nil,
+		serviceName:          "testService3",
+		expectedEndpointOut:  "test.com/test1"},
+	{testName: "existing service, refresh timeout not triggered",
+		consulAgentEndpoints: []string{"test.com/test1", "test.com/test2"},
+		consulAgentError:     nil,
+		serviceName:          "testService3",
+		expectedEndpointOut:  "test.com/test2"},
+}
+
+func TestGetServiceEndpoint(t *testing.T) {
+	for i := range testCases {
+		t.Log(testCases[i].testName)
+
+		//sleep if a refresh test to trigger timeout
+		if testCases[i].sleep {
+			time.Sleep(time.Millisecond * 10)
+		}
+
+		testAgent.endpoints = testCases[i].consulAgentEndpoints
+		testAgent.err = testCases[i].consulAgentError
+
+		endpoint, err := GetServiceEndpoint(testCases[i].serviceName)
+
+		testsPassed := true
+		if endpoint != testCases[i].expectedEndpointOut {
+			t.Error("ERROR: endpoint expected:", testCases[i].expectedEndpointOut, " endpoint recieved:", endpoint)
+			testsPassed = false
+		}
+
+		if err != testCases[i].consulAgentError {
+			t.Error("ERROR: error expected: {", testCases[i].consulAgentError, "} error recieved: {", err, "}")
+			testsPassed = false
+		}
+
+		if testsPassed {
+			t.Log("PASS")
+		}
+	}
+}
+
 func TestServiceMapNewService(t *testing.T) {
 	//test getHealthyEndpoints error
 	testAgent.endpoints = []string{}
@@ -30,158 +105,5 @@ func TestServiceMapNewService(t *testing.T) {
 	_, present = testServiceMap["testNewValidCase"]
 	if !present {
 		t.Error("service 'testNewValidCase' wasn't added to testServiceMap map")
-	}
-}
-
-func TestServiceEndpointsGetAndInc(t *testing.T) {
-	testServiceEndpoint := &serviceEndpoints{
-		endpoints: []string{"test.com/test1", "test.com/test2"},
-		index:     0,
-	}
-
-	//test first increment on 2 endpoint service
-	endpointFirst := testServiceEndpoint.getAndInc()
-	if (endpointFirst != "test.com/test1") && (testServiceEndpoint.index != 1) {
-		t.Error("getAndInc did not return the correct endpoint and increment after initializing")
-	}
-
-	//test second increment on 2 endpoint service
-	endpointSecond := testServiceEndpoint.getAndInc()
-	if (endpointSecond != "test.com/test2") && (testServiceEndpoint.index != 0) {
-		t.Error("getAndInc did not return the correct endpoint and increment after a previos call")
-	}
-
-	//test third increment on 2 endpoint service, should loop back to first endpoint
-	endpointBackToStart := testServiceEndpoint.getAndInc()
-	if (endpointBackToStart != "test.com/test1") && (testServiceEndpoint.index != 1) {
-		t.Error("getAndInc did not circle around to the first endpoint when at the emd on the endpoint slice")
-	}
-
-}
-
-func TestServiceEndpointsRefresh(t *testing.T) {
-	//test error from getHealthyEndpoints
-	testServiceEndpoint := &serviceEndpoints{
-		endpoints: []string{"test.com/test1", "test.com/test2"},
-		index:     0,
-	}
-	testAgent.endpoints = []string{}
-	testAgent.err = errors.New("get healthly endpoints failure")
-	err := testServiceEndpoint.refresh()
-	if err == nil {
-		t.Error("no error returned despite getHealthyEndpoints returning an error")
-	}
-
-	//test index in range
-	testServiceEndpoint = &serviceEndpoints{
-		endpoints: []string{"test.com/test1", "test.com/test2"},
-		index:     1,
-	}
-	testAgent.endpoints = []string{"test.com/test1", "test.com/test2"}
-	testAgent.err = nil
-	err = testServiceEndpoint.refresh()
-	if err != nil {
-		t.Error("refreshing a valid test case returned error:", err)
-	}
-	if testServiceEndpoint.index != 1 {
-		t.Error("refresh did not return the same index when endpoint list length didn't change")
-	}
-
-	//test index out of range
-	testServiceEndpoint = &serviceEndpoints{
-		endpoints: []string{"test.com/test1", "test.com/test2"},
-		index:     5,
-	}
-	testAgent.endpoints = []string{"test.com/test1", "test.com/test2"}
-	testAgent.err = nil
-	err = testServiceEndpoint.refresh()
-	if err != nil {
-		t.Error("refreshing a valid test case returned error:", err)
-	}
-	if testServiceEndpoint.index == 5 {
-		t.Error("refresh did not return a new index when endpoint list length decreased")
-	}
-}
-
-func TestServiceEndpointsTimedOut(t *testing.T) {
-	//test timed out
-	testServiceEndpoint := &serviceEndpoints{
-		timeout: time.After(time.Millisecond),
-	}
-	time.Sleep(time.Millisecond * 5)
-	if !testServiceEndpoint.timedOut() {
-		t.Error("timeout should have returned true for a time out")
-	}
-
-	//test not timed out
-	testServiceEndpoint = &serviceEndpoints{
-		timeout: time.After(time.Second),
-	}
-	if testServiceEndpoint.timedOut() {
-		t.Error("timeout should have returned false for a time out")
-	}
-}
-
-type BehaviorTest struct {
-	testName       string
-	agentEndpoints []string
-	agentError     error
-	serviceName    string
-	endpointOut    string
-	sleep          bool
-}
-
-var testCases = []BehaviorTest{
-	{testName: "new working",
-		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
-		agentError:     nil,
-		serviceName:    "test1",
-		endpointOut:    "test.com/test1"},
-	{testName: "new not working",
-		agentEndpoints: []string{""},
-		agentError:     errors.New("consul error"),
-		serviceName:    "test2",
-		endpointOut:    ""},
-	{testName: "refresh not working",
-		agentEndpoints: []string{""},
-		agentError:     errors.New("consul error"),
-		serviceName:    "test1",
-		endpointOut:    "",
-		sleep:          true},
-	{testName: "refresh working",
-		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
-		agentError:     nil,
-		serviceName:    "test1",
-		endpointOut:    "test.com/test2",
-		sleep:          true},
-	{testName: "new working",
-		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
-		agentError:     nil,
-		serviceName:    "test3",
-		endpointOut:    "test.com/test1"},
-	{testName: "don't refresh, working",
-		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
-		agentError:     nil,
-		serviceName:    "test3",
-		endpointOut:    "test.com/test2"},
-}
-
-func TestGetServiceEndpoint(t *testing.T) {
-	for i := range testCases {
-		if testCases[i].sleep {
-			time.Sleep(time.Millisecond * 10)
-		}
-		testAgent.endpoints = testCases[i].agentEndpoints
-		testAgent.err = testCases[i].agentError
-
-		endpoint, err := GetServiceEndpoint(testCases[i].serviceName)
-
-		if endpoint != testCases[i].endpointOut {
-			t.Error(testCases[i].testName, " endpoint expected:", testCases[i].endpointOut, " endpoint recieved:", endpoint)
-		}
-
-		if err != testCases[i].agentError {
-			t.Error(testCases[i].testName, err, testCases[i].agentError)
-		}
 	}
 }
