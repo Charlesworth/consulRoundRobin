@@ -8,6 +8,9 @@ package consulRoundRobin
 */
 
 import (
+	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -18,11 +21,28 @@ type serviceEndpoints struct {
 	timeout   <-chan time.Time
 }
 
-// var services map[string]*serviceEndpoints
 type serviceMap map[string]*serviceEndpoints
 
 var services = make(serviceMap)
-var endpointTimeOut = time.Minute
+
+// var consulRefreshRate = time.Minute
+
+var consulIP string
+var consulRefreshRate time.Duration
+
+func init() {
+
+	//***** if consul ip empty then use test client *****
+	consulIP = os.Getenv("CONSUL_IP")
+	consulRefreshRateString := os.Getenv("CONSUL_REFRESH_RATE")
+
+	var err error
+	consulRefreshRateInt, err := strconv.Atoi(consulRefreshRateString)
+	if err != nil {
+		log.Fatal(err)
+	}
+	consulRefreshRate = time.Second * time.Duration(consulRefreshRateInt)
+}
 
 //possible error that serviceMap has no *
 func (s serviceMap) newService(service string) error {
@@ -35,7 +55,7 @@ func (s serviceMap) newService(service string) error {
 		name:      service,
 		endpoints: endpoints,
 		index:     0,
-		timeout:   time.After(endpointTimeOut),
+		timeout:   time.After(consulRefreshRate),
 	}
 
 	return nil
@@ -55,7 +75,7 @@ func (s *serviceEndpoints) refresh() error {
 		name:      s.name,
 		endpoints: endpoints,
 		index:     s.index,
-		timeout:   time.After(endpointTimeOut),
+		timeout:   time.After(consulRefreshRate),
 	}
 
 	return nil
@@ -92,9 +112,9 @@ func GetServiceEndpoint(service string) (endpoint string, err error) {
 	//if timeout
 	if services[service].timedOut() {
 		//refresh endpoints
-		err = services[service].refresh()
-		if err != nil {
-			return "", err
+		errr := services[service].refresh()
+		if errr != nil {
+			return "", errr
 		}
 	}
 

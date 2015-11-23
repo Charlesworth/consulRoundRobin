@@ -128,6 +128,7 @@ type BehaviorTest struct {
 	agentError     error
 	serviceName    string
 	endpointOut    string
+	sleep          bool
 }
 
 var testCases = []BehaviorTest{
@@ -141,32 +142,42 @@ var testCases = []BehaviorTest{
 		agentError:     errors.New("consul error"),
 		serviceName:    "test2",
 		endpointOut:    ""},
-	{testName: "refresh working",
-		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
-		agentError:     nil,
-		serviceName:    "test1",
-		endpointOut:    "test.com/test1"},
 	{testName: "refresh not working",
 		agentEndpoints: []string{""},
 		agentError:     errors.New("consul error"),
 		serviceName:    "test1",
-		endpointOut:    ""},
-	{testName: "don't refresh, working",
+		endpointOut:    "",
+		sleep:          true},
+	{testName: "refresh working",
 		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
 		agentError:     nil,
 		serviceName:    "test1",
+		endpointOut:    "test.com/test2",
+		sleep:          true},
+	{testName: "new working",
+		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
+		agentError:     nil,
+		serviceName:    "test3",
 		endpointOut:    "test.com/test1"},
+	{testName: "don't refresh, working",
+		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
+		agentError:     nil,
+		serviceName:    "test3",
+		endpointOut:    "test.com/test2"},
 }
 
 func TestGetServiceEndpoint(t *testing.T) {
 	for i := range testCases {
+		if testCases[i].sleep {
+			time.Sleep(time.Second * 2)
+		}
 		agent.endpoints = testCases[i].agentEndpoints
 		agent.err = testCases[i].agentError
 
 		endpoint, err := GetServiceEndpoint(testCases[i].serviceName)
 
 		if endpoint != testCases[i].endpointOut {
-			t.Error(testCases[i].testName, endpoint, testCases[i].endpointOut)
+			t.Error(testCases[i].testName, " endpoint expected:", testCases[i].endpointOut, " endpoint recieved:", endpoint)
 		}
 
 		if err != testCases[i].agentError {
