@@ -144,17 +144,17 @@ var testCases = []BehaviorTest{
 	{testName: "refresh working",
 		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
 		agentError:     nil,
-		serviceName:    "test3",
+		serviceName:    "test1",
 		endpointOut:    "test.com/test1"},
 	{testName: "refresh not working",
 		agentEndpoints: []string{""},
 		agentError:     errors.New("consul error"),
-		serviceName:    "test4",
+		serviceName:    "test1",
 		endpointOut:    ""},
 	{testName: "don't refresh, working",
 		agentEndpoints: []string{"test.com/test1", "test.com/test2"},
 		agentError:     nil,
-		serviceName:    "test5",
+		serviceName:    "test1",
 		endpointOut:    "test.com/test1"},
 }
 
@@ -163,7 +163,7 @@ func TestGetServiceEndpoint(t *testing.T) {
 		agent.endpoints = testCases[i].agentEndpoints
 		agent.err = testCases[i].agentError
 
-		endpoint, err := GetServiceEndpoint(testCases[i].testName)
+		endpoint, err := GetServiceEndpoint(testCases[i].serviceName)
 
 		if endpoint != testCases[i].endpointOut {
 			t.Error(testCases[i].testName, endpoint, testCases[i].endpointOut)
