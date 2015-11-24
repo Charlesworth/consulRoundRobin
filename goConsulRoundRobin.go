@@ -1,4 +1,4 @@
-package consulRoundRobin
+package goConsulRoundRobin
 
 import (
 	"sync"
@@ -30,9 +30,9 @@ func GetServiceEndpoint(service string) (endpoint string, err error) {
 	//if timeout
 	if services[service].timedOut() {
 		//refresh endpoints
-		errr := services[service].refresh()
-		if errr != nil {
-			return "", errr
+		err := services[service].refresh()
+		if err != nil {
+			return "", err
 		}
 	}
 

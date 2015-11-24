@@ -1,4 +1,4 @@
-package consulRoundRobin
+package goConsulRoundRobin
 
 import (
 	"errors"
@@ -73,6 +73,22 @@ func TestServiceEndpointsRefresh(t *testing.T) {
 	}
 	if testServiceEndpoint.index == 5 {
 		t.Error("refresh did not return a new index when endpoint list length decreased")
+	}
+
+	//test check endpoint have changed with what is being returned from consul
+	testServiceEndpoint = &serviceEndpoints{
+		endpoints: []string{"test.com/oldName", "test.com/oldName"},
+		index:     0,
+	}
+	testAgent.endpoints = []string{"test.com/newName", "test.com/newName"}
+	testAgent.err = nil
+	err = testServiceEndpoint.refresh()
+	if err != nil {
+		t.Error("refreshing a valid test case returned error:", err)
+	}
+	if testServiceEndpoint.endpoints[0] != "test.com/newName" {
+		t.Error("refresh did not insert the new endpoint list returned from the consul agent",
+			"expected: ", testAgent.endpoints, ", got: ", testServiceEndpoint.endpoints)
 	}
 }
 

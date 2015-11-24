@@ -1,4 +1,4 @@
-package consulRoundRobin
+package goConsulRoundRobin
 
 import (
 	"log"
@@ -24,25 +24,25 @@ var healthClient consulHealthAgent
 var testAgent agentStruct
 
 func init() {
-	consulRefreshRateString := os.Getenv("CONSUL_REFRESH_RATE")
+	consulRefreshRateString := os.Getenv("SERVICE_CACHE_TIMEOUT")
 
 	var err error
 	consulRefreshRateInt, err := strconv.Atoi(consulRefreshRateString)
 	if err != nil {
 		log.Fatal(err)
 	}
-	consulRefreshRate = time.Second * time.Duration(consulRefreshRateInt)
+	consulRefreshRate = time.Millisecond * time.Duration(consulRefreshRateInt)
 
 	consulIP = os.Getenv("CONSUL_IP")
-	//***** if consul ip empty then use test client *****
+	//***** if consul ip = "test" then use test client *****
 	if consulIP == "test" {
 		//set test agent here
 		consulRefreshRate = time.Millisecond
-	}
-
-	healthClient, err = newConsulHealthClient(consulIP, ":8500")
-	if err != nil {
-		log.Fatal(err)
+	} else {
+		healthClient, err = newConsulHealthClient(consulIP, ":8500")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -84,10 +84,4 @@ func getEndpointsFromServiceEntries(serviceEntries []*consulapi.ServiceEntry) (s
 		serviceEndpoints = append(serviceEndpoints, serviceEndpoint)
 	}
 	return serviceEndpoints
-}
-
-func checkErrFatal(err error) {
-	if err != nil {
-		log.Fatalln("consulRoundRobin Fatal Error: ", err)
-	}
 }

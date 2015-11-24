@@ -1,4 +1,4 @@
-package consulRoundRobin
+package goConsulRoundRobin
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-package consulRoundRobin
+package goConsulRoundRobin
 
 import "time"
 
@@ -19,12 +19,8 @@ func (s *serviceEndpoints) refresh() error {
 		s.index = 0
 	}
 
-	s = &serviceEndpoints{
-		name:      s.name,
-		endpoints: endpoints,
-		index:     s.index,
-		timeout:   time.After(consulRefreshRate),
-	}
+	s.endpoints = endpoints
+	s.timeout = time.After(consulRefreshRate)
 
 	return nil
 }
