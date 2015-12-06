@@ -10,8 +10,14 @@ type serviceMap map[string]*serviceEndpoints
 var services = make(serviceMap)
 var requestLock = &sync.Mutex{}
 
+//TestURL is setable in test scenarios (set CONSUL_IP=testMode) and is what will return on a GetServiceEndpoint call
+var TestURL string
+
 //GetServiceEndpoint returns a healthy, round robbined service endpoint
 func GetServiceEndpoint(service string) (endpoint string, err error) {
+	if consulIP == "testMode" {
+		return TestURL, nil
+	}
 	//requestLock makes all requests synchronus as maps are not thread safe
 	requestLock.Lock()
 	defer requestLock.Unlock()
