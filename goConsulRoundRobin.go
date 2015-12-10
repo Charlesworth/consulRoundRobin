@@ -13,10 +13,13 @@ var requestLock = &sync.Mutex{}
 //TestURL is setable in test scenarios (set CONSUL_IP=testMode) and is what will return on a GetServiceEndpoint call
 var TestURL string
 
+//TestErr is setable in test scenarios (set CONSUL_IP=testMode) and is what will return on a GetServiceEndpoint call
+var TestErr error
+
 //GetServiceEndpoint returns a healthy, round robbined service endpoint
 func GetServiceEndpoint(service string) (endpoint string, err error) {
 	if consulIP == "testMode" {
-		return TestURL, nil
+		return TestURL, TestErr
 	}
 	//requestLock makes all requests synchronus as maps are not thread safe
 	requestLock.Lock()
